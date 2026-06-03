@@ -111,6 +111,16 @@
     },
     {
       "parameters": {
+        "jsCode": "const eventId = $json.event_id;\nif (!eventId) return [$input.first()];\n\nconst store = $getWorkflowStaticData('global');\nif (!store.processedEvents) store.processedEvents = {};\n\n// Already seen this event_id — Slack retry, skip it\nif (store.processedEvents[eventId]) {\n  return [];\n}\n\n// Mark as processed, keep last 200 events\nstore.processedEvents[eventId] = Date.now();\nconst keys = Object.keys(store.processedEvents);\nif (keys.length > 200) {\n  const oldest = keys.sort((a,b) => store.processedEvents[a] - store.processedEvents[b]).slice(0, keys.length - 200);\n  oldest.forEach(k => delete store.processedEvents[k]);\n}\n\nreturn [$input.first()];"
+      },
+      "id": "dedup-check",
+      "name": "Dedup Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 600]
+    },
+    {
+      "parameters": {
         "conditions": {
           "options": {"version": 2, "leftValue": "", "caseSensitive": false, "typeValidation": "loose"},
           "conditions": [{"id": "balance-intent", "leftValue": "={{ ($json.text || $json.body?.text || $json.chatInput || '').toLowerCase() }}", "operator": {"type": "string", "operation": "regex"}, "rightValue": "balance|who owes|reconcil|settle|bilan|qui doit|net|owe"}],
@@ -274,7 +284,8 @@
       ]
     },
     "Extract Slack Message": {"main": [[{"node": "Ack Slack", "type": "main", "index": 0}]]},
-    "Ack Slack": {"main": [[{"node": "Skip Bot Messages", "type": "main", "index": 0}]]},
+    "Ack Slack": {"main": [[{"node": "Dedup Check", "type": "main", "index": 0}]]},
+    "Dedup Check": {"main": [[{"node": "Skip Bot Messages", "type": "main", "index": 0}]]},
     "Skip Bot Messages": {"main": [[{"node": "Intent Router", "type": "main", "index": 0}]]},
     "Intent Router": {
       "main": [
