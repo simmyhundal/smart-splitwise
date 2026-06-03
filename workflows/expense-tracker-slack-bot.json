@@ -1,0 +1,239 @@
+{
+  "id": "aDIKYhI2l7uAbrjm",
+  "name": "Expense Tracker – Slack Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "trigger": ["message"],
+        "watchWorkspace": true,
+        "options": {}
+      },
+      "id": "slack-trigger",
+      "name": "Slack Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [0, 304],
+      "webhookId": "9fad9bd4-e69c-407f-96d8-f814b10934e4",
+      "credentials": {
+        "slackApi": {
+          "id": "IAJf6PNoiRYiRRs2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "no-bot",
+              "leftValue": "={{ $json.bot_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-bots",
+      "name": "Skip Bot Messages",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [304, 304]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "You are an expense-tracking assistant for a group trip. You manage a Google Sheet with shared expenses for Diana, Jasmine, and Simmy.\n\nSHEET COLUMNS (Expenses tab):\n- ID: sequential integer (new row = max existing ID + 1)\n- Date: YYYY-MM-DD\n- Description: free text\n- Category: Food & Drink | Gas / Fuel | Transportation | Lodging | Entertainment | Groceries | Shopping | Other\n- Currency: always USD\n- Total: full expense amount\n- Split Type: Equal | Custom\n- Paid: Diana / Paid: Jasmine / Paid: Simmy (must sum to Total)\n- Owed: Diana / Owed: Jasmine / Owed: Simmy (must sum to Total)\n- Notes: optional\nDO NOT write Check Paid or Check Owed — those are auto-formulas.\n\nSPLIT RULES:\n- Equal: each Owed = Total / 3, rounded to cents; distribute any leftover penny so the three values sum exactly to Total.\n- Custom: set Split Type = Custom, set Owed cells individually, add a Note.\n\nTOOL USAGE:\n- read_balances: use for ANY balance, reconciliation, or settle-up question. Reads pre-calculated results — do NOT compute manually.\n- read_expenses: use for listing expenses, searching specific entries, or before adding/updating a row.\n- append_expense: call with a JSON object of all writable columns to add a new row.\n- update_expense: call with a JSON object containing ID plus the fields to change.\n\nKeep replies concise and Slack-friendly. Format amounts as $X.XX."
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [608, 304]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-4-6"
+        },
+        "options": {}
+      },
+      "id": "claude-model",
+      "name": "Claude Sonnet",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [400, 512],
+      "credentials": {
+        "anthropicApi": {
+          "id": "ce4C2LvAwRWxnsf4",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Slack Trigger').first().json.user }}",
+        "contextWindowLength": 10
+      },
+      "id": "memory",
+      "name": "Session Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [608, 512]
+    },
+    {
+      "parameters": {
+        "description": "Reads the pre-calculated balances from the Balances tab. Use this for ANY question about who owes what, reconciliation, settle-up amounts, or net balances. Do NOT recalculate — just read and report what this tool returns.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "Hih5XlwiqCn2yITU",
+          "cachedResultName": "Expense Tracker – Read Balances"
+        },
+        "workflowInputs": {
+          "schema": [],
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        }
+      },
+      "id": "tool-balances",
+      "name": "read_balances",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1400, 512]
+    },
+    {
+      "parameters": {
+        "description": "Reads all rows from the Expenses Google Sheet. Use for listing expenses, searching specific entries, or before adding/updating a row.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "hWA1Ezr4JXMsNUz4",
+          "cachedResultName": "Expense Tracker – Read Expenses"
+        },
+        "workflowInputs": {
+          "schema": [],
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        }
+      },
+      "id": "tool-read",
+      "name": "read_expenses",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [800, 512]
+    },
+    {
+      "parameters": {
+        "description": "Appends a new expense row to the Google Sheet. Pass a JSON object with keys: ID, Date, Description, Category, Currency, Total, Split Type, Paid: Diana, Paid: Jasmine, Paid: Simmy, Owed: Diana, Owed: Jasmine, Owed: Simmy, Notes.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "aVoPVNPKup2UcS9M",
+          "cachedResultName": "Expense Tracker – Append Expense"
+        },
+        "workflowInputs": {
+          "schema": [],
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        }
+      },
+      "id": "tool-append",
+      "name": "append_expense",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1008, 512]
+    },
+    {
+      "parameters": {
+        "description": "Updates an existing expense row. Pass a JSON object with ID (to find the row) plus only the fields you want to change.",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "WPvE9LopWSXku0VS",
+          "cachedResultName": "Expense Tracker – Update Expense"
+        },
+        "workflowInputs": {
+          "schema": [],
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        }
+      },
+      "id": "tool-update",
+      "name": "update_expense",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1200, 512]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "operation": "post",
+        "channel": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Slack Trigger').first().json.channel }}",
+          "cachedResultName": "DM Channel"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {}
+      },
+      "id": "slack-reply",
+      "name": "Send Slack Reply",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [912, 304]
+    }
+  ],
+  "connections": {
+    "Slack Trigger": {
+      "main": [[{"node": "Skip Bot Messages", "type": "main", "index": 0}]]
+    },
+    "Skip Bot Messages": {
+      "main": [[{"node": "AI Agent", "type": "main", "index": 0}]]
+    },
+    "AI Agent": {
+      "main": [[{"node": "Send Slack Reply", "type": "main", "index": 0}]]
+    },
+    "Claude Sonnet": {
+      "ai_languageModel": [[{"node": "AI Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Session Memory": {
+      "ai_memory": [[{"node": "AI Agent", "type": "ai_memory", "index": 0}]]
+    },
+    "read_balances": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "read_expenses": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "append_expense": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "update_expense": {
+      "ai_tool": [[{"node": "AI Agent", "type": "ai_tool", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

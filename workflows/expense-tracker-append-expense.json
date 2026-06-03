@@ -1,0 +1,66 @@
+{
+  "id": "aVoPVNPKup2UcS9M",
+  "name": "Expense Tracker – Append Expense",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "wf-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.query || $input.first().json;\nconst data = typeof raw === 'string' ? JSON.parse(raw) : raw;\nreturn [{ json: data }];"
+      },
+      "id": "parse-input",
+      "name": "Parse Expense JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "14GJ_ot0x7yyXaZW3pvMNC8oDfsTiiliDAjlYwy1t8vw"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1523910145"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": [],
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "append-sheet",
+      "name": "Append Expense Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [600, 0]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{"node": "Parse Expense JSON", "type": "main", "index": 0}]]
+    },
+    "Parse Expense JSON": {
+      "main": [[{"node": "Append Expense Row", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "hWA1Ezr4JXMsNUz4",
+  "name": "Expense Tracker – Read Expenses",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "wf-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "14GJ_ot0x7yyXaZW3pvMNC8oDfsTiiliDAjlYwy1t8vw",
+          "cachedResultName": "Jasmine in Paris - Shared Expense Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Expenses",
+          "cachedResultName": "Expenses"
+        },
+        "range": "A:Z",
+        "options": {}
+      },
+      "id": "read-sheet",
+      "name": "Read Expenses Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [300, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ltdCX0bvu4yMtxGD",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{"node": "Read Expenses Sheet", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
